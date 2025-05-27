@@ -136,8 +136,8 @@ Configure your application using the `.env` file:
 
 ```bash
 # Database Configuration
-DB_STRING="postgresql+psycopg2://username:password@localhost:5432/yourdb"
-ALEMBIC_DB_URL="postgresql+psycopg2://username:password@localhost:5432/yourdb"
+DB_STRING="postgresql+psycopg2://username:password@db:5432/yourdb"
+ALEMBIC_DB_URL="postgresql+psycopg2://username:password@db:5432/yourdb"
 
 # Application Configuration
 DEBUG=True
