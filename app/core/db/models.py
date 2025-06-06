@@ -11,16 +11,6 @@ class RoleUserLink(SQLModel, table=True):
     role_id: str = Field(foreign_key="role.id", primary_key=True)
 
 
-class UserCommentLikeLink(SQLModel, table=True):
-    comment_id: UUID = Field(foreign_key="comment.id", primary_key=True)
-    user_id: str = Field(foreign_key="user.id", primary_key=True)
-
-
-class UserPostLikeLink(SQLModel, table=True):
-    user_id: str = Field(foreign_key="user.id", primary_key=True)
-    post_id: UUID = Field(foreign_key="post.id", primary_key=True)
-
-
 class User(SQLModel, table=True):
     id: str = Field(default_factory=lambda: gen_id(10), primary_key=True)
     email: str
