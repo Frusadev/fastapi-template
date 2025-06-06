@@ -1,3 +1,6 @@
+[tool.pyright]
+typeCheckingMode = "standard"
+
 [project]
 name = "fastapi-template"
 version = "0.1.0"
