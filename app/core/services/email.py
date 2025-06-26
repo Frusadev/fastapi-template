@@ -10,7 +10,7 @@ from app.core.logging.log import log_error
 from app.core.services.templating import render_template
 
 APP_EMAIL_ADDRESS = env.get_env("APP_EMAIL_ADDRESS", "")
-GOOGLE_APP_PASSWORD = env.get_env("EMAIL_APP_PASSWORD", "")
+SMTP_PASSWORD = env.get_env("EMAIL_APP_PASSWORD", "")
 
 
 def send_email(email: str, subject: str, message: str, html: bool = False):
@@ -27,13 +27,13 @@ def send_email(email: str, subject: str, message: str, html: bool = False):
 
     ssl_context = ssl.create_default_context()
 
-    if not APP_EMAIL_ADDRESS or not GOOGLE_APP_PASSWORD:
+    if not APP_EMAIL_ADDRESS or not SMTP_PASSWORD:
         raise ValueError("Origin email and password not set")
 
     with smtplib.SMTP_SSL(
         "smtp.gmail.com", 465, context=ssl_context
     ) as server:
-        server.login(APP_EMAIL_ADDRESS, GOOGLE_APP_PASSWORD)
+        server.login(APP_EMAIL_ADDRESS, SMTP_PASSWORD)
         try:
             server.send_message(email_message)
         except Exception as e:

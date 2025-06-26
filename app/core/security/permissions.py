@@ -15,13 +15,11 @@ from app.core.security.checkers import check_existence
 
 EXEMPLE_RESOURCE = "resource"
 
-ACTION_CREATE = "create"
-ACTION_READ = "read"
+ACTION_CREATE = "c"
+ACTION_READ = "r"
 ACTION_READWRITE = "rw"
-ACTION_UPDATE = "update"
-ACTION_DELETE = "delete"
-ACTION_CRUD = "crud"
-ADMIN_ACTION = "admin_action"
+ACTION_UPDATE = "w"
+ACTION_DELETE = "d"
 
 
 def create_global_permission(
@@ -112,21 +110,6 @@ def has_permission(
     return permission is not None
 
 
-def has_crud_permission(
-    db_session: Session,
-    role: Role,
-    resource_name: str,
-    resource_id: str,
-) -> bool:
-    return has_permission(
-        db_session=db_session,
-        role=role,
-        resource_name=resource_name,
-        resource_id=resource_id,
-        action_name=ACTION_CRUD,
-    )
-
-
 def has_global_permission(
     db_session: Session,
     role: Role,
@@ -140,19 +123,6 @@ def has_global_permission(
         )
     ).first()
     return permission is not None
-
-
-def has_global_crud_permission(
-    db_session: Session,
-    role: Role,
-    resource_name: str,
-) -> bool:
-    return has_global_permission(
-        db_session=db_session,
-        role=role,
-        resource_name=resource_name,
-        action_name=ACTION_CRUD,
-    )
 
 
 class PermissionCheckModel(BaseModel):
