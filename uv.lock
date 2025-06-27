@@ -155,12 +155,6 @@ wheels = [
 ]
 
 [[package]]
-name = "ciso8601"
-version = "2.3.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/09/e9/d83711081c997540aee59ad2f49d81f01d33e8551d766b0ebde346f605af/ciso8601-2.3.2.tar.gz", hash = "sha256:ec1616969aa46c51310b196022e5d3926f8d3fa52b80ec17f6b4133623bd5434", size = 28214, upload-time = "2024-12-09T12:26:40.768Z" }
-
-[[package]]
 name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
@@ -303,7 +297,6 @@ source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
-    { name = "ciso8601" },
     { name = "dotenv" },
     { name = "fastapi", extra = ["standard"] },
     { name = "passlib", extra = ["bcrypt"] },
@@ -320,7 +313,6 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.16.1" },
     { name = "asyncpg", specifier = ">=0.30.0" },
-    { name = "ciso8601", specifier = ">=2.3.2" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
     { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },
