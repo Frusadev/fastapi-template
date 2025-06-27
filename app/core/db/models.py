@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-from uuid import UUID
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -15,6 +14,7 @@ class User(SQLModel, table=True):
     id: str = Field(default_factory=lambda: gen_id(10), primary_key=True)
     email: str
     username: str
+    hashed_password: str
     name: str
     login_sessions: list["LoginSession"] = Relationship(back_populates="user")
     auth_sessions: list["AuthSession"] = Relationship(back_populates="user")
