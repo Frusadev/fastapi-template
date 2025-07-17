@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import Session
 
 from app.api.routes.v1.dto.auth import (
     LoginRequestDTO,
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 @router.post("/register", response_model=MessageDTO)
 async def register_user(
     request: RegisterRequestDTO,
-    db_session: Annotated[AsyncSession, Depends(create_db_session)],
+    db_session: Annotated[Session, Depends(create_db_session)],
 ):
     """Register a new user account."""
     return await register(
@@ -40,7 +40,7 @@ async def register_user(
 async def login_user(
     request: LoginRequestDTO,
     response: Response,
-    db_session: Annotated[AsyncSession, Depends(create_db_session)],
+    db_session: Annotated[Session, Depends(create_db_session)],
 ):
     """Login user and create session."""
     return await login(
@@ -65,4 +65,4 @@ async def logout_user(
 ):
     """Logout user by clearing session cookie."""
     response.delete_cookie(key="user_session_id", httponly=True)
-    return MessageDTO(message="Logged out successfully.")
+    return await MessageDTO(message="Logged out successfully.")

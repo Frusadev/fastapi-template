@@ -1,10 +1,10 @@
-from datetime import datetime, timezone
-from typing import Annotated, Optional
+from datetime import datetime
+from datetime import timezone as tz
+from typing import Annotated
 
 from fastapi import Cookie, Depends, Response
 from pydantic import EmailStr
-from sqlmodel import or_, select
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import Session, or_, select
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 from app.api.routes.v1.dto.message import MessageDTO
@@ -23,10 +23,11 @@ from app.core.security.checkers import (
 )
 from app.core.security.permissions import ACTION_READWRITE, USER_RESOURCE
 from app.utils.crypto import hash_password, verify_password
+from app.utils.date import utc
 
 
 async def register(
-    db_session: AsyncSession,
+    db_session: Session,
     username: str,
     email: EmailStr,
     password: str,
@@ -34,11 +35,9 @@ async def register(
     name: str,
 ):
     check_non_existence(
-        (
-            await db_session.exec(
-                select(User).where(
-                    or_(User.email == email, User.username == username)
-                )
+        db_session.exec(
+            select(User).where(
+                or_(User.email == email, User.username == username)
             )
         ).first()
     )
@@ -61,69 +60,47 @@ async def register(
     )
 
     db_session.add_all([user, perm, role])
-    await db_session.commit()
+    db_session.commit()
     return MessageDTO(message="Registered !")
 
 
 async def login(
-    db_session: AsyncSession,
+    db_session: Session,
     email: EmailStr,
     password: str,
     response: Response,
 ):
     user = check_existence(
-        (
-            await db_session.exec(select(User).where(User.email == email))
-        ).first()
+        db_session.exec(select(User).where(User.email == email)).first()
     )
     check_conditions([verify_password(password, user.hashed_password)])
 
     login_session = LoginSession(user_id=user.id)
     db_session.add(login_session)
-    await db_session.commit()
+    db_session.commit()
     response.set_cookie(
         key="user_session_id",
         value=login_session.id,
         httponly=True,
-        expires=login_session.expires_at.astimezone(timezone.utc),
+        expires=utc(login_session.expires_at),
     )
     return MessageDTO(message="Logged in successfully.")
 
 
 async def get_current_user(
-    db_session: Annotated[AsyncSession, Depends(create_db_session)],
+    db_session: Annotated[Session, Depends(create_db_session)],
     session_id: Annotated[str | None, Cookie(alias="user_session_id")] = None,
 ):
     login_session = check_existence(
-        await db_session.get(LoginSession, session_id),
+        db_session.get(LoginSession, session_id),
         status_code=HTTP_401_UNAUTHORIZED,
         detail="Not authenticated.",
     )
     check_conditions(
         [
-            login_session.expires_at > datetime.utcnow(),
+            login_session.expires_at > datetime.now(tz.utc),
             not login_session.expired,
         ],
         detail="Not authenticated.",
-    )
-    return login_session.user
-
-
-async def ws_get_current_user(
-    db_session: Annotated[AsyncSession, Depends(create_db_session)],
-    session_id: Annotated[str | None, Cookie(alias="user_session_id")] = None,
-):
-    login_session = check_existence(
-        await db_session.get(LoginSession, session_id),
-        status_code=HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated.",
-    )
-    check_conditions(
-        [
-            login_session.expires_at > datetime.utcnow(),
-            not login_session.expired,
-        ],
-        detail="Not authenticated.",
-        is_ws=True,
     )
     return login_session.user

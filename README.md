@@ -5,9 +5,9 @@ A production-ready FastAPI template with modern Python tooling, async database o
 ## 🚀 Features
 
 - **FastAPI Framework**: High-performance async web framework
-- **SQLModel Integration**: Type-safe async database operations with SQLAlchemy 2.0
+- **SQLModel Integration**: Type-safe database operations with SQLAlchemy 2.0
 - **Authentication System**: Complete session-based authentication with role-based permissions
-- **Async Database Operations**: Full async support with AsyncSession
+- **Database Operations**: Full synchronous support with Session
 - **Alembic Migrations**: Database schema versioning and migrations
 - **Email Services**: SMTP email sending with HTML template support
 - **Docker Support**: Multi-stage Dockerfile with Docker Compose
@@ -167,58 +167,58 @@ Update the `DB_STRING` in your `.env` file according to your database choice.
 
 ## 📊 Database Operations
 
-### Async Database Sessions
+### Database Sessions
 
-The template uses **AsyncSession** for all database operations, providing better performance and scalability:
+The template uses **Session** for all database operations, providing reliable and straightforward database access:
 
 ```python
 from typing import Annotated
 from fastapi import Depends
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import Session
 from app.core.db.setup import create_db_session
 
 @router.get("/users")
-async def get_users(
-    db_session: Annotated[AsyncSession, Depends(create_db_session)],
+def get_users(
+    db_session: Annotated[Session, Depends(create_db_session)],
 ):
-    # Execute async query
-    result = await db_session.exec(select(User))
+    # Execute query
+    result = db_session.exec(select(User))
     users = result.all()
     return {"users": users}
 
 @router.post("/users")
-async def create_user(
+def create_user(
     user_data: UserCreateDTO,
-    db_session: Annotated[AsyncSession, Depends(create_db_session)],
+    db_session: Annotated[Session, Depends(create_db_session)],
 ):
     user = User(**user_data.model_dump())
     db_session.add(user)
-    await db_session.commit()  # Async commit
-    await db_session.refresh(user)  # Async refresh
+    db_session.commit()  # Synchronous commit
+    db_session.refresh(user)  # Synchronous refresh
     return user
 ```
 
-### Working with AsyncSession
+### Working with Session
 
-**Key patterns for async database operations:**
+**Key patterns for database operations:**
 
 ```python
 # 1. Querying data
-async def get_user_by_email(db_session: AsyncSession, email: str) -> User | None:
-    result = await db_session.exec(select(User).where(User.email == email))
+def get_user_by_email(db_session: Session, email: str) -> User | None:
+    result = db_session.exec(select(User).where(User.email == email))
     return result.first()
 
 # 2. Creating records
-async def create_user(db_session: AsyncSession, user_data: dict) -> User:
+def create_user(db_session: Session, user_data: dict) -> User:
     user = User(**user_data)
     db_session.add(user)
-    await db_session.commit()
-    await db_session.refresh(user)
+    db_session.commit()
+    db_session.refresh(user)
     return user
 
 # 3. Complex queries with relationships
-async def get_user_with_roles(db_session: AsyncSession, user_id: str) -> User | None:
-    result = await db_session.exec(
+def get_user_with_roles(db_session: Session, user_id: str) -> User | None:
+    result = db_session.exec(
         select(User)
         .options(selectinload(User.roles))  # Eager load relationships
         .where(User.id == user_id)
@@ -226,14 +226,14 @@ async def get_user_with_roles(db_session: AsyncSession, user_id: str) -> User | 
     return result.first()
 
 # 4. Transactions
-async def transfer_operation(db_session: AsyncSession):
+def transfer_operation(db_session: Session):
     try:
         # Multiple operations in transaction
         db_session.add(record1)
         db_session.add(record2)
-        await db_session.commit()
+        db_session.commit()
     except Exception:
-        await db_session.rollback()
+        db_session.rollback()
         raise
 ```
 
@@ -377,7 +377,7 @@ from app.api.routes.v1.providers.auth import get_current_user
 from app.core.db.models import User
 
 @router.get("/protected-route")
-async def protected_endpoint(
+def protected_endpoint(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     # User is automatically authenticated via session cookie
@@ -387,12 +387,12 @@ async def protected_endpoint(
 from app.api.routes.v1.providers.auth import ws_get_current_user
 
 @app.websocket("/ws")
-async def websocket_endpoint(
+def websocket_endpoint(
     websocket: WebSocket,
     current_user: User = Depends(ws_get_current_user)
 ):
     # WebSocket with authentication
-    await websocket.accept()
+    websocket.accept()
     # ... websocket logic
 ```
 
@@ -412,8 +412,8 @@ class User(SQLModel, table=True):
 
 **2. Extend Registration** (`app/api/routes/v1/providers/auth.py`):
 ```python
-async def register(
-    db_session: AsyncSession,
+def register(
+    db_session: Session,
     username: str,
     email: EmailStr,
     password: str,
@@ -553,12 +553,12 @@ class TodoResponseDTO(BaseModel):
 **2. Create Provider** (`app/api/routes/v1/providers/`):
 ```python
 # app/api/routes/v1/providers/todo.py
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import Session
 from sqlmodel import select
 from app.core.db.models import User, Todo
 
-async def create_todo(
-    db_session: AsyncSession,
+def create_todo(
+    db_session: Session,
     current_user: User,
     title: str,
     description: str | None = None,
@@ -571,15 +571,15 @@ async def create_todo(
         user_id=current_user.id,
     )
     db_session.add(todo)
-    await db_session.commit()
-    await db_session.refresh(todo)
+    db_session.commit()
+    db_session.refresh(todo)
     return todo
 
-async def get_user_todos(
-    db_session: AsyncSession,
+def get_user_todos(
+    db_session: Session,
     current_user: User,
 ) -> list[Todo]:
-    result = await db_session.exec(
+    result = db_session.exec(
         select(Todo).where(Todo.user_id == current_user.id)
     )
     return result.all()
@@ -601,13 +601,13 @@ from app.core.db.setup import create_db_session
 router = APIRouter(prefix="/todos", tags=["Todos"])
 
 @router.post("/", response_model=TodoResponseDTO)
-async def create_user_todo(
+def create_user_todo(
     request: TodoCreateDTO,
     current_user: Annotated[User, Depends(get_current_user)],
-    db_session: Annotated[AsyncSession, Depends(create_db_session)],
+    db_session: Annotated[Session, Depends(create_db_session)],
 ):
     """Create a new todo for the authenticated user."""
-    todo = await create_todo(
+    todo = create_todo(
         db_session=db_session,
         current_user=current_user,
         title=request.title,
@@ -617,12 +617,12 @@ async def create_user_todo(
     return todo
 
 @router.get("/", response_model=list[TodoResponseDTO])
-async def get_my_todos(
+def get_my_todos(
     current_user: Annotated[User, Depends(get_current_user)],
-    db_session: Annotated[AsyncSession, Depends(create_db_session)],
+    db_session: Annotated[Session, Depends(create_db_session)],
 ):
     """Get all todos for the authenticated user."""
-    todos = await get_user_todos(db_session, current_user)
+    todos = get_user_todos(db_session, current_user)
     return todos
 ```
 
@@ -677,9 +677,9 @@ from app.core.security.checkers import (
 )
 
 # Usage in providers
-async def get_todo_by_id(db_session: AsyncSession, todo_id: str, user_id: str):
+def get_todo_by_id(db_session: Session, todo_id: str, user_id: str):
     todo = check_existence(
-        await db_session.get(Todo, todo_id),
+        db_session.get(Todo, todo_id),
         detail="Todo not found"
     )
     
@@ -1096,7 +1096,7 @@ The template is ready for health check endpoints:
 ```python
 # Add to your router
 @router.get("/health")
-async def health_check():
+def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
 ```
 
