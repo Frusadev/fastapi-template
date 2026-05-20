@@ -194,17 +194,16 @@ class PermissionChecker(BaseModel):
 
     def check(
         self,
-        either: bool = False,
+        either: bool = False, # If True, the function will return True if at least one of the permissions is satisfied. If False, the function will return True only if all permissions are satisfied for at least one role.
         raise_exception: bool = True,
-        backwards: bool = False,
-        error_message: str = "Vous n'êtes pas autorisé à accéder à cette ressource",
+        backwards: bool = False,  # If True, the function will return False if the permissions are satisfied and True if they are not. This can be useful for cases where you want to check if a user does NOT have certain permissions.
+        error_message: str = "Not authorized to access this resource",
     ) -> bool:
         if self.bypass_role in [
             role.name for role in self.roles if role.name is not None
         ]:
             return True
         if either:
-            # Check if any permission is satisfied
             for role in self.roles:
                 for pcheck in self.pcheck_models:
                     if self._is_allowed(role, pcheck, pcheck.action_name):
@@ -213,7 +212,6 @@ class PermissionChecker(BaseModel):
                 raise HTTPException(401, error_message)
             return False if not backwards else True
 
-        # Check if all permissions are satisfied for at least one role
         for role in self.roles:
             all_permissions_satisfied = True
             for pcheck in self.pcheck_models:
