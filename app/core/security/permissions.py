@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -141,7 +141,7 @@ class PermissionChecker(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
     db_session: Session
     roles: list[Role]
-    bypass_role: str | None = None
+    bypass_role: Literal["admin", "superadmin"] | str | None = None
     pcheck_models: Sequence[PermissionCheckModel | GlobalPermissionCheckModel]
 
     def _is_allowed(
@@ -151,6 +151,20 @@ class PermissionChecker(BaseModel):
         action_name: str,
     ) -> bool:
         if isinstance(pcheck, PermissionCheckModel):
+            if pcheck.action_name == "r":
+                return has_permission(
+                    db_session=self.db_session,
+                    role=role,
+                    resource_name=pcheck.resource_name,
+                    resource_id=str(pcheck.resource_id),
+                    action_name=action_name,
+                ) or has_permission(
+                    db_session=self.db_session,
+                    role=role,
+                    resource_name=pcheck.resource_name,
+                    resource_id=str(pcheck.resource_id),
+                    action_name="rw",
+                )
             return has_permission(
                 db_session=self.db_session,
                 role=role,
@@ -159,6 +173,18 @@ class PermissionChecker(BaseModel):
                 action_name=action_name,
             )
         elif isinstance(pcheck, GlobalPermissionCheckModel):
+            if pcheck.action_name == "r":
+                return has_global_permission(
+                    db_session=self.db_session,
+                    role=role,
+                    resource_name=pcheck.resource_name,
+                    action_name=action_name,
+                ) or has_global_permission(
+                    db_session=self.db_session,
+                    role=role,
+                    resource_name=pcheck.resource_name,
+                    action_name="rw",
+                )
             return has_global_permission(
                 db_session=self.db_session,
                 role=role,
@@ -166,29 +192,38 @@ class PermissionChecker(BaseModel):
                 action_name=action_name,
             )
 
-    def check(self, either: bool = False) -> bool:
-        if self.bypass_role in [role.name for role in self.roles]:
+    def check(
+        self,
+        either: bool = False,
+        raise_exception: bool = True,
+        backwards: bool = False,
+        error_message: str = "Vous n'êtes pas autorisé à accéder à cette ressource",
+    ) -> bool:
+        if self.bypass_role in [
+            role.name for role in self.roles if role.name is not None
+        ]:
             return True
         if either:
             # Check if any permission is satisfied
             for role in self.roles:
                 for pcheck in self.pcheck_models:
-                    for action_name in pcheck.action_names:
-                        if self._is_allowed(role, pcheck, action_name):
-                            return True
-            raise HTTPException(401, "Not authorized to access this resource")
+                    if self._is_allowed(role, pcheck, pcheck.action_name):
+                        return True if not backwards else False
+            if raise_exception:
+                raise HTTPException(401, error_message)
+            return False if not backwards else True
 
         # Check if all permissions are satisfied for at least one role
         for role in self.roles:
             all_permissions_satisfied = True
             for pcheck in self.pcheck_models:
-                for action_name in pcheck.action_names:
-                    if not self._is_allowed(role, pcheck, action_name):
-                        all_permissions_satisfied = False
-                        break
+                if not self._is_allowed(role, pcheck, pcheck.action_name):
+                    all_permissions_satisfied = False
+                    break
                 if not all_permissions_satisfied:
                     break
             if all_permissions_satisfied:
-                return True
-
-        raise HTTPException(401, "Not authorized to access resource")
+                return True if not backwards else False
+        if raise_exception:
+            raise HTTPException(401, error_message)
+        return False if not backwards else True
